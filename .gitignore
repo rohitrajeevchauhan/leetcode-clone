@@ -1,11 +1,11 @@
 
-# Java / Gradle
+# Java / Gradle backend
 backend/.gradle/
 backend/build/
 backend/out/
-**/.class
+**/*.class
 
-# Node / React
+# Node / React frontend
 frontend/node_modules/
 frontend/dist/
 frontend/build/
@@ -20,6 +20,9 @@ frontend/.next/
 .env
 .env.*
 !.env.example
+
+# Local configuration containing credentials
+backend/src/main/resources/application.properties
 **/application-local.properties
 **/application-local.yml
 
