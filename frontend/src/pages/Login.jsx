@@ -1,288 +1,234 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-    Code2,
     Lock,
     Mail,
     Loader2,
     AlertCircle,
-    Eye,
-    EyeOff,
-    ArrowRight,
-    ShieldCheck,
-} from 'lucide-react'
+} from "lucide-react";
+import axios from "axios";
+
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ||
+    "https://leetcode-clone-1867.onrender.com";
 
 export default function Login() {
-    const navigate = useNavigate()
-    const location = useLocation()
+    const navigate = useNavigate();
+    const location = useLocation();
 
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (event) => {
-        event.preventDefault()
-        setError('')
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-        if (!email.trim() || !password) {
-            setError('Please enter your email and password.')
-            return
-        }
-
-        setLoading(true)
+        setError("");
+        setLoading(true);
 
         try {
-            const response = await axios.post('/api/auth/login', {
-                email: email.trim(),
-                password,
-            })
+            const response = await axios.post(
+                `${API_BASE_URL}/api/auth/login`,
+                {
+                    email: email.trim().toLowerCase(),
+                    password: password,
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    timeout: 60000,
+                }
+            );
 
-            const data = response.data
+            const data = response.data;
 
             if (!data || !data.token) {
-                setError('Login response did not contain an authentication token.')
-                return
+                throw new Error(
+                    "Login response did not contain an authentication token."
+                );
             }
 
-            localStorage.setItem('token', data.token)
-            localStorage.setItem(
-                'username',
-                data.username || email.trim().split('@')[0]
-            )
-            localStorage.setItem('email', data.email || email.trim())
+            // Store authentication details.
+            localStorage.setItem("token", data.token);
+
+            if (data.username) {
+                localStorage.setItem("username", data.username);
+            }
+
+            if (data.email) {
+                localStorage.setItem("email", data.email);
+            }
+
+            if (data.userId != null) {
+                localStorage.setItem("userId", String(data.userId));
+            }
 
             if (data.role) {
-                localStorage.setItem('role', data.role)
+                localStorage.setItem("role", data.role);
             }
 
-            localStorage.setItem('user', JSON.stringify(data))
-
-            const destination =
-                location.state?.from?.pathname || '/dashboard'
-
-            navigate(destination, { replace: true })
+            // Navigate to the page the user originally requested,
+            // or to the Problems page by default.
+            const destination = location.state?.from?.pathname || "/problems";
+            navigate(destination, { replace: true });
         } catch (err) {
-            if (err.response?.status === 401 || err.response?.status === 403) {
-                setError('Invalid email or password. Please try again.')
-            } else if (err.response?.data?.message) {
-                setError(err.response.data.message)
-            } else if (err.response) {
-                setError('Login failed. Please check your credentials.')
+            console.error(
+                "Login error:",
+                err.response?.status,
+                err.response?.data || err.message
+            );
+
+            if (err.response?.status === 401) {
+                setError("Invalid email or password.");
+            } else if (err.response?.status === 403) {
+                setError(
+                    "Access forbidden. Check your backend security configuration."
+                );
+            } else if (err.response?.status === 404) {
+                setError(
+                    "Login endpoint not found. Check your backend API URL."
+                );
+            } else if (err.response?.status === 409) {
+                setError("A conflict occurred. Please check your account details.");
+            } else if (err.response?.status >= 500) {
+                setError(
+                    "Backend server error. Please try again in a moment."
+                );
+            } else if (err.code === "ECONNABORTED") {
+                setError(
+                    "The server took too long to respond. Please try again."
+                );
+            } else if (!err.response) {
+                setError(
+                    "Cannot connect to the backend. Check the server and CORS settings."
+                );
             } else {
                 setError(
-                    'Unable to connect to the server. Check that your backend is running.'
-                )
+                    err.response?.data?.message ||
+                    err.response?.data?.detail ||
+                    "Login failed. Please check your credentials."
+                );
             }
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
     return (
-        <main className="relative flex min-h-[calc(100vh-64px)] items-center justify-center overflow-hidden bg-slate-950 px-4 py-12 text-white">
-            {/* Background effects */}
-            <div className="pointer-events-none absolute -left-32 top-10 h-80 w-80 rounded-full bg-purple-600/15 blur-[100px]" />
-            <div className="pointer-events-none absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-cyan-500/10 blur-[110px]" />
+        <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4 py-10">
+            <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8 shadow-2xl">
+                <div className="mb-8 text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500 text-2xl font-bold text-white">
+                        LC
+                    </div>
 
-            <div className="relative grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 shadow-2xl shadow-black/40 lg:grid-cols-2">
-                {/* Left panel */}
-                <section className="relative hidden flex-col justify-between overflow-hidden border-r border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-purple-950/50 p-10 lg:flex">
+                    <h1 className="text-3xl font-bold text-white">
+                        Welcome Back
+                    </h1>
+
+                    <p className="mt-2 text-sm text-gray-400">
+                        Sign in to continue solving problems.
+                    </p>
+                </div>
+
+                {error && (
+                    <div
+                        role="alert"
+                        className="mb-5 flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300"
+                    >
+                        <AlertCircle
+                            size={20}
+                            className="mt-0.5 shrink-0"
+                        />
+                        <span>{error}</span>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <div className="inline-flex items-center gap-3">
-                            <div className="rounded-xl bg-gradient-to-br from-purple-600 to-cyan-500 p-3">
-                                <Code2 size={28} />
-                            </div>
+                        <label
+                            htmlFor="email"
+                            className="mb-2 block text-sm font-medium text-gray-300"
+                        >
+                            Email address
+                        </label>
 
-                            <span className="text-2xl font-bold">
-                Leet<span className="text-cyan-400">Clone</span>
-              </span>
-                        </div>
+                        <div className="relative">
+                            <Mail
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                            />
 
-                        <div className="mt-20">
-              <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                Your coding journey
-              </span>
-
-                            <h1 className="mt-6 text-4xl font-bold leading-tight">
-                                Think better.
-                                <br />
-                                Code smarter.
-                                <br />
-                                <span className="bg-gradient-to-r from-purple-400 to-cyan-300 bg-clip-text text-transparent">
-                  Grow every day.
-                </span>
-                            </h1>
-
-                            <p className="mt-5 max-w-sm leading-7 text-slate-400">
-                                Practice coding problems, track your progress, and prepare
-                                for your next technical interview.
-                            </p>
+                            <input
+                                id="email"
+                                type="email"
+                                name="email"
+                                autoComplete="email"
+                                placeholder="you@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                className="w-full rounded-lg border border-gray-700 bg-gray-800 py-3 pl-10 pr-4 text-white outline-none transition placeholder:text-gray-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                            />
                         </div>
                     </div>
 
-                    <div className="mt-16 rounded-2xl border border-slate-700/70 bg-slate-950/50 p-5">
-                        <div className="flex items-center gap-3">
-                            <div className="rounded-xl bg-purple-500/15 p-3 text-purple-300">
-                                <ShieldCheck size={24} />
-                            </div>
+                    <div>
+                        <label
+                            htmlFor="password"
+                            className="mb-2 block text-sm font-medium text-gray-300"
+                        >
+                            Password
+                        </label>
 
-                            <div>
-                                <p className="font-semibold text-slate-200">
-                                    Your workspace awaits
-                                </p>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Sign in to continue learning.
-                                </p>
-                            </div>
+                        <div className="relative">
+                            <Lock
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                            />
+
+                            <input
+                                id="password"
+                                type="password"
+                                name="password"
+                                autoComplete="current-password"
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="w-full rounded-lg border border-gray-700 bg-gray-800 py-3 pl-10 pr-4 text-white outline-none transition placeholder:text-gray-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                            />
                         </div>
                     </div>
-                </section>
 
-                {/* Login form */}
-                <section className="p-6 sm:p-10 lg:p-12">
-                    <div className="mx-auto max-w-md">
-                        <div className="mb-8 lg:hidden">
-                            <div className="inline-flex items-center gap-3">
-                                <div className="rounded-xl bg-gradient-to-br from-purple-600 to-cyan-500 p-2.5">
-                                    <Code2 size={24} />
-                                </div>
-
-                                <span className="text-2xl font-bold">
-                  Leet<span className="text-cyan-400">Clone</span>
-                </span>
-                            </div>
-                        </div>
-
-                        <div className="mb-8">
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">
-                                Welcome back
-                            </p>
-
-                            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                                Sign in to your account
-                            </h2>
-
-                            <p className="mt-3 text-sm leading-6 text-slate-400">
-                                Enter your credentials to access your coding workspace.
-                            </p>
-                        </div>
-
-                        {error && (
-                            <div
-                                role="alert"
-                                className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300"
-                            >
-                                <AlertCircle size={19} className="mt-0.5 shrink-0" />
-                                <p>{error}</p>
-                            </div>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 py-3 font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {loading ? (
+                            <>
+                                <Loader2 size={20} className="animate-spin" />
+                                Signing in...
+                            </>
+                        ) : (
+                            "Sign In"
                         )}
+                    </button>
+                </form>
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div>
-                                <label
-                                    htmlFor="email"
-                                    className="mb-2 block text-sm font-medium text-slate-300"
-                                >
-                                    Email address
-                                </label>
-
-                                <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/80 px-4 transition focus-within:border-cyan-400/60 focus-within:ring-2 focus-within:ring-cyan-400/10">
-                                    <Mail size={19} className="shrink-0 text-slate-500" />
-
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        autoComplete="email"
-                                        required
-                                        value={email}
-                                        onChange={(event) => setEmail(event.target.value)}
-                                        placeholder="you@example.com"
-                                        className="w-full bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-slate-600"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <div className="mb-2 flex items-center justify-between">
-                                    <label
-                                        htmlFor="password"
-                                        className="text-sm font-medium text-slate-300"
-                                    >
-                                        Password
-                                    </label>
-                                </div>
-
-                                <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/80 px-4 transition focus-within:border-cyan-400/60 focus-within:ring-2 focus-within:ring-cyan-400/10">
-                                    <Lock size={19} className="shrink-0 text-slate-500" />
-
-                                    <input
-                                        id="password"
-                                        type={showPassword ? 'text' : 'password'}
-                                        autoComplete="current-password"
-                                        required
-                                        value={password}
-                                        onChange={(event) => setPassword(event.target.value)}
-                                        placeholder="Enter your password"
-                                        className="w-full bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-slate-600"
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword((value) => !value)}
-                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                        className="shrink-0 text-slate-500 transition hover:text-cyan-300"
-                                    >
-                                        {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3.5 font-semibold text-white shadow-lg shadow-purple-950/30 transition hover:from-purple-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 size={19} className="animate-spin" />
-                                        Signing in...
-                                    </>
-                                ) : (
-                                    <>
-                                        Sign in
-                                        <ArrowRight size={19} />
-                                    </>
-                                )}
-                            </button>
-                        </form>
-
-                        <div className="my-7 flex items-center gap-4">
-                            <div className="h-px flex-1 bg-slate-800" />
-                            <span className="text-xs text-slate-600">
-                YOUR CODING JOURNEY STARTS HERE
-              </span>
-                            <div className="h-px flex-1 bg-slate-800" />
-                        </div>
-
-                        <p className="text-center text-sm text-slate-400">
-                            Don&apos;t have an account?{' '}
-                            <Link
-                                to="/register"
-                                className="font-semibold text-cyan-400 transition hover:text-cyan-300"
-                            >
-                                Create an account
-                            </Link>
-                        </p>
-
-                        <p className="mt-8 text-center text-xs text-slate-600">
-                            LeetClone · Practice. Improve. Succeed.
-                        </p>
-                    </div>
-                </section>
+                <p className="mt-6 text-center text-sm text-gray-400">
+                    Don't have an account?{" "}
+                    <Link
+                        to="/register"
+                        className="font-semibold text-orange-400 hover:text-orange-300"
+                    >
+                        Create an account
+                    </Link>
+                </p>
             </div>
-        </main>
-    )
+        </div>
+    );
 }
