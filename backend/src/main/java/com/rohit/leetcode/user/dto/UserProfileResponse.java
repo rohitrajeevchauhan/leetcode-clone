@@ -1,0 +1,31 @@
+package com.rohit.leetcode.user.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserProfileResponse {
+
+    private Long id;
+
+    private String username;
+
+    private String email;
+
+    private String role;
+
+    private boolean active;
+
+    private LocalDateTime createdAt;
+
+    private UserStatsResponse stats;
+}
